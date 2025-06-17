@@ -617,19 +617,47 @@ class Model_Diffusers(PreviewGenerator):
                     sampling_type = "EPS"
 
                 if model_type == "sdxl":
-                    if vae_model is None:
-                        logger.info("Default VAE: madebyollin/sdxl-vae-fp16-fix")
+                    vae_component = None
+                    if vae_model:
+                        try:
+                            logger.info(f"Loading custom VAE: {vae_model}")
+                            if os.path.isfile(vae_model):
+                                vae_component = AutoencoderKL.from_single_file(vae_model, torch_dtype=torch.float16)
+                            else:
+                                vae_component = AutoencoderKL.from_pretrained(vae_model, torch_dtype=torch.float16)
+                        except Exception as e:
+                            logger.error(f"Failed to load custom VAE: {e}. Falling back to default.")
+                            vae_model = None  # Reset to trigger default loading
+
+                    if not vae_component:
+                        default_vae_id = "madebyollin/sdxl-vae-fp16-fix"
+                        logger.info(f"Using default VAE: {default_vae_id}")
+                        vae_component = AutoencoderKL.from_pretrained(default_vae_id, torch_dtype=torch.float16)
+
                     self.pipe = StableDiffusionXLPipeline.from_single_file(
                         base_model_id,
-                        vae=AutoencoderKL.from_pretrained(
-                            "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16
-                        ),
+                        vae=vae_component,
                         torch_dtype=self.type_model_precision,
                     )
                     class_name = SDXL
                 elif model_type == "sd1.5":
                     default_components = {}
-                    if not has_baked_vae:
+                    if vae_model:
+                        try:
+                            logger.info(f"Loading custom VAE: {vae_model}")
+                            if os.path.isfile(vae_model):
+                                default_components["vae"] = AutoencoderKL.from_single_file(
+                                    vae_model, torch_dtype=self.type_model_precision
+                                )
+                            else:
+                                default_components["vae"] = AutoencoderKL.from_pretrained(
+                                    vae_model, torch_dtype=self.type_model_precision
+                                )
+                        except Exception as e:
+                            logger.error(f"Failed to load custom VAE: {e}. Checking for baked VAE or using default.")
+                            vae_model = None # Fallback to baked/default
+                    
+                    if not vae_model and not has_baked_vae:
                         sd_vae = "stabilityai/sd-vae-ft-ema"
                         logger.info(
                             "The checkpoint doesn't include a baked VAE, "
@@ -746,14 +774,27 @@ class Model_Diffusers(PreviewGenerator):
                         )
 
                     case "StableDiffusionXLPipeline":
-                        if vae_model is None:
-                            logger.info("Default VAE: madebyollin/sdxl-vae-fp16-fix")
+                        vae_component = None
+                        if vae_model:
+                            try:
+                                logger.info(f"Loading custom VAE: {vae_model}")
+                                if os.path.isfile(vae_model):
+                                    vae_component = AutoencoderKL.from_single_file(vae_model, torch_dtype=torch.float16)
+                                else:
+                                    vae_component = AutoencoderKL.from_pretrained(vae_model, torch_dtype=torch.float16)
+                            except Exception as e:
+                                logger.error(f"Failed to load custom VAE: {e}. Falling back to default.")
+                                vae_model = None # Reset to allow fallback
+
+                        if not vae_component:
+                            default_vae_id = "madebyollin/sdxl-vae-fp16-fix"
+                            logger.info(f"Using default VAE: {default_vae_id}")
+                            vae_component = AutoencoderKL.from_pretrained(default_vae_id, torch_dtype=torch.float16)
+
                         try:
                             self.pipe = DiffusionPipeline.from_pretrained(
                                 base_model_id,
-                                vae=AutoencoderKL.from_pretrained(
-                                    "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16
-                                ),
+                                vae=vae_component,
                                 torch_dtype=torch.float16,
                                 use_safetensors=True,
                                 variant="fp16",
@@ -764,9 +805,7 @@ class Model_Diffusers(PreviewGenerator):
                             logger.debug("Loading model without parameter variant=fp16")
                             self.pipe = DiffusionPipeline.from_pretrained(
                                 base_model_id,
-                                vae=AutoencoderKL.from_pretrained(
-                                    "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16
-                                ),
+                                vae=vae_component,
                                 torch_dtype=torch.float16,
                                 use_safetensors=True,
                                 add_watermarker=False,
@@ -776,24 +815,25 @@ class Model_Diffusers(PreviewGenerator):
 
             # Load VAE after loaded model
             if vae_model is None:
-                logger.debug("Default VAE")
+                logger.debug("Default VAE or already loaded.")
                 pass
-            else:
+            elif self.class_name not in [SDXL, SD15]: # SDXL and SD15 VAE is loaded with the pipe now
                 logger.info(f"VAE: {vae_model}")
-                if os.path.isfile(vae_model):
-                    self.pipe.vae = AutoencoderKL.from_single_file(
-                        vae_model,
-                    )
-                else:
-                    self.pipe.vae = AutoencoderKL.from_pretrained(
-                        vae_model,
-                        subfolder="vae",
-                    )
                 try:
+                    if os.path.isfile(vae_model):
+                        self.pipe.vae = AutoencoderKL.from_single_file(
+                            vae_model,
+                        )
+                    else:
+                        self.pipe.vae = AutoencoderKL.from_pretrained(
+                            vae_model,
+                            subfolder="vae", # Keep in case some models need it
+                        )
                     self.pipe.vae.to(self.type_model_precision)
                 except Exception as e:
-                    logger.debug(str(e))
-                    logger.warning(f"VAE: not in {self.type_model_precision}")
+                    logger.error(f"Failed to load and apply VAE '{vae_model}': {e}")
+                    logger.warning("Continuing with the model's default VAE.")
+            
             self.vae_model = vae_model
 
             # Define base scheduler config
