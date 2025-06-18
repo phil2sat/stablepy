@@ -203,6 +203,7 @@ class Model_Diffusers(PreviewGenerator):
         device: Device to use for computation. Default is None (Automatic).
         controlnet_model (str): ControlNet model to use. Default is "Automatic".
         env_components (dict): Environment components. Default is None.
+        hf_token: str | None = None,
     """
     def __init__(
         self,
@@ -214,6 +215,7 @@ class Model_Diffusers(PreviewGenerator):
         device=None,
         controlnet_model="Automatic",
         env_components=None,
+        hf_token: str | None = None,
     ):
         super().__init__()
 
@@ -222,6 +224,17 @@ class Model_Diffusers(PreviewGenerator):
             self.env_components.pop("transformer", None)
         else:
             self.env_components = None
+
+        # Hugging Face authentication token setup (must occur before any model downloads)
+        self.hf_token = hf_token or os.getenv("HF_TOKEN")
+        if self.hf_token:
+            try:
+                from huggingface_hub import login as hf_login
+                # Perform a one-time login; subsequent hub calls will reuse the stored token
+                hf_login(self.hf_token)
+            except Exception as e:
+                # Avoid breaking initialisation if authentication fails – just log a warning
+                logger.warning(f"Hugging Face login failed: {e}")
 
         self.device = (
             torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -259,6 +272,8 @@ class Model_Diffusers(PreviewGenerator):
         self.styles_data = styles_data
         self.STYLE_NAMES = STYLE_NAMES
         self.style_json_file = ""
+
+        # self.base_model_id reassignment removed to avoid duplication
 
     def advanced_params(
         self,
