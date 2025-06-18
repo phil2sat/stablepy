@@ -20,7 +20,7 @@ safetensors = ">=0.4.3"
 mediapy = ">=1.1.9"
 ipywidgets = "7.7.1"
 controlnet-aux = "0.0.6"
-mediapipe = {git = "https://github.com/AureliusIvan/mediapipe-updated.git", branch = "add-python-3.13-support"}
+mediapipe = "*"
 pytorch-lightning = ">=2.0.9.post0"
 ultralytics = "<=8.3.48"
 huggingface_hub = ">=0.23.1"
@@ -34,7 +34,7 @@ lark = "*"
 spandrel = "0.3.4"
 spandrel-extra-arches = "0.1.1"
 facexlib = "0.3.0"
-sentencepiece = {git = "https://github.com/AureliusIvan/sentencepiece-updated.git", subdirectory = "python"}
+sentencepiece = "*"
 
 [build-system]
 requires = ["poetry-core"]
