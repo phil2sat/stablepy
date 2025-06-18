@@ -2,11 +2,11 @@
 name = "stablepy"
 version = "0.6.1"
 description = "A tool for easy use of stable diffusion"
-authors = ["Roger Condori(R3gm) <rocondoriflores@gmail.com>"]
+authors = ["AureliusIvan <aureliusivanwijaya@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.12"
 torch = "*"
 torchvision = "*"
 torchaudio = "*"
@@ -20,7 +20,7 @@ safetensors = ">=0.4.3"
 mediapy = ">=1.1.9"
 ipywidgets = "7.7.1"
 controlnet-aux = "0.0.6"
-mediapipe = "0.10.21"
+mediapipe = {git = "https://github.com/AureliusIvan/mediapipe-updated.git", branch = "add-python-3.13-support"}
 pytorch-lightning = ">=2.0.9.post0"
 ultralytics = "<=8.3.48"
 huggingface_hub = ">=0.23.1"
@@ -29,14 +29,12 @@ torchsde = ">=0.2.6"
 onnxruntime = ">=1.18.0"
 insightface = ">=0.7.3"
 opencv-contrib-python = ">=4.8.0.76"
-sentencepiece = "*"
 numpy = "<=1.26.4"
 lark = "*"
 spandrel = "0.3.4"
 spandrel-extra-arches = "0.1.1"
 facexlib = "0.3.0"
-
-
+sentencepiece = {git = "https://github.com/AureliusIvan/sentencepiece-updated.git", subdirectory = "python"}
 
 [build-system]
 requires = ["poetry-core"]

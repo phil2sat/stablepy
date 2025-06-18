@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  stablepy-dev:
+    build: .
+    container_name: stablepy-dev
+    volumes:
+      - .:/app
+      - ~/.cache:/home/dev/.cache  # Share cache for faster rebuilds
+    ports:
+      - "8888:8888"  # Jupyter notebook
+      - "8000:8000"  # Development server
+    environment:
+      - PYTHONPATH=/app
+    stdin_open: true
+    tty: true
+    working_dir: /app
+    command: /bin/bash
+
+  # Optional: separate container for Jupyter notebook
+  jupyter:
+    build: .
+    container_name: stablepy-jupyter
+    volumes:
+      - .:/app
+      - ~/.cache:/home/dev/.cache
+    ports:
+      - "8889:8888"
+    environment:
+      - PYTHONPATH=/app
+    working_dir: /app
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+    profiles:
+      - jupyter 
